@@ -1,0 +1,45 @@
+{
+  "name": "localize-ai",
+  "version": "1.0.0",
+  "description": "plug and play localization package",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "files": ["dist"],
+  "module": "dist/index.js",
+  "exports": {
+  ".": {
+    "import": "./dist/index.js",
+    "types": "./dist/index.d.ts"
+  }
+},
+  "bin": {
+    "localize-ai": "dist/cli.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+  "localization",
+  "i18n",
+  "translation",
+  "react-i18n",
+  "ai-translation",
+  "gemini"
+],
+  "author": "Parth Gupta",
+  "license": "MIT",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "dotenv": "^17.3.1"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "@types/node": "^25.5.0",
+    "@types/react": "^19.2.14",
+    "react": "^19.2.4"
+  }
+}
