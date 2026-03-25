@@ -25,7 +25,7 @@ if (!API_KEY) {
 
 const genAI = new GoogleGenerativeAI(API_KEY);
 
-const INPUT = path.join(ROOT, "clean_strings.json");
+const INPUT = path.join(ROOT, "cleaned_strings.json");
 const OUTPUT = path.join(ROOT,"public","translations.json");
 
 const CHUNK_SIZE = 100;

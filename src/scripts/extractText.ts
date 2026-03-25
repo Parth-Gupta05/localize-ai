@@ -3,7 +3,7 @@ import path from "path";
 
 const ROOT = process.cwd(); // ✅ user project
 const SRC_DIR = path.join(ROOT, "src");
-const OUTPUT_FILE = path.join(ROOT, "translations_en.json");
+const OUTPUT_FILE = path.join(ROOT,"extractedText.json");
 
 let existingStrings = new Set<string>();
 

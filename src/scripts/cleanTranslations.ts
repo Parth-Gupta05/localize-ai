@@ -3,8 +3,8 @@ import path from "path";
 
 const ROOT = process.cwd();
 
-const INPUT = path.join(ROOT, "translations_en.json");
-const OUTPUT = path.join(ROOT, "clean_strings.json");
+const INPUT = path.join(ROOT, "extractedText.json");
+const OUTPUT = path.join(ROOT, "cleaned_strings.json");
 
 function isValid(text: string): boolean {
   if (!text || text.length < 3) return false;
