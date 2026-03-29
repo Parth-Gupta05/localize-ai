@@ -5,16 +5,46 @@ import { loadUserConfig } from "./loadConfig.js";
 export async function generateRuntimeConfig() {
   const config = await loadUserConfig();
 
-  // Transform config if needed
+  // ✅ Required fields (fail fast)
+  if (!config.sourceLanguage) {
+    console.error("❌ Missing 'sourceLanguage'");
+    process.exit(1);
+  }
+
+  if (!config.translationLanguages) {
+    console.error("❌ Missing 'translationLanguages'");
+    process.exit(1);
+  }
+
+  if (!config.provider) {
+    console.error("❌ Missing 'provider'");
+    process.exit(1);
+  }
+
+  if (!config.apikey) {
+    console.error("❌ Missing 'apikey'");
+    process.exit(1);
+  }
+
+  // ✅ Normalize optional field
+const context =
+  typeof config.context === "string" ? config.context : "";
+  // ✅ Transform
   const runtimeConfig = {
     sourceLanguage: config.sourceLanguage,
     supportedLangs: config.translationLanguages,
-    apikey: config.apikey
+    apikey: config.apikey,
+    provider: config.provider,
+    context,
   };
 
   const outputPath = path.resolve(process.cwd(), "localize.runtime.json");
 
-  fs.writeFileSync(outputPath, JSON.stringify(runtimeConfig, null, 2));
-
-  console.log("✅ localize.runtime.json generated successfully!");
+  try {
+    fs.writeFileSync(outputPath, JSON.stringify(runtimeConfig, null, 2));
+    console.log("✅ Config ready (localize.runtime.json)");
+  } catch {
+    console.error("❌ Failed to write localize.runtime.json");
+    process.exit(1);
+  }
 }

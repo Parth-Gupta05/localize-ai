@@ -1,19 +1,24 @@
 # 🚀 localize-ai
 
+
 **Plug & Play AI-powered localization for React apps**
 
+> Context-aware AI localization with multi-provider support ⚡
+
 Automatically extract, translate, and serve multilingual UI — powered by AI ⚡
+
 
 ---
 
 ## ✨ Features
 
 * 🔍 Auto-extract static text from your codebase (`t("...")`)
-* 🌍 AI-powered translations (Gemini)
+* 🌍 AI-powered translations (Gemini, Openai)
 * ⚡ Incremental translation (only new strings + languages)
 * 🧠 Zero config runtime (auto loads translations)
 * ⚛️ React hooks + context out of the box
 * 💸 Cost optimized (no re-translation of existing content)
+* 🧠 Context-aware translations
 
 ---
 
@@ -34,8 +39,9 @@ npm install localize-ai
 export default {
   sourceLanguage: "en",
   translationLanguages: ["hi", "fr"],
-  provider: "gemini",
-  apikey: "VITE_GEMINI_API_KEY"
+  provider: "gemini",  // or "openai"
+  apikey: "VITE_GEMINI_API_KEY",
+  context: "E-commerce checkout UI for buying products"
 };
 ```
 
@@ -110,7 +116,7 @@ function App() {
 ```tsx
 const { setLang } = useTranslation();
 
-setLang("hi"); // switch language
+setLang("fr"); // switch language
 ```
 
 ---
@@ -188,7 +194,6 @@ npx localize-ai translate   # extract + translate
 ## 🗺 Roadmap
 
 * [ ] AST-based extraction (no regex)
-* [ ] Multi-provider support (OpenAI, etc.)
 * [ ] Lazy loading translations
 * [ ] CLI UI improvements
 
