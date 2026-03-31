@@ -1,7 +1,7 @@
 {
   "name": "localize-ai",
-  "version": "1.1.0",
-  "description": "plug and play localization package",
+  "version": "1.2.0",
+  "description": "AI-powered React localization with context-aware translations, multi-provider support, lazy loading, and per-locale splitting",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
@@ -26,9 +26,15 @@
     "localization",
     "i18n",
     "translation",
+    "react",
     "react-i18n",
+    "ai",
     "ai-translation",
-    "gemini"
+    "openai",
+    "gemini",
+    "internationalization",
+    "multilingual",
+    "react-localization"
   ],
   "author": "Parth Gupta",
   "license": "MIT",

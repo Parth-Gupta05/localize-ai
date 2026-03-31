@@ -1,24 +1,49 @@
 # 🚀 localize-ai
 
 
-**Plug & Play AI-powered localization for React apps**
+**Plug & Play AI-powered localization for React apps with lazy loading & per-locale splitting**
 
 > Context-aware AI localization with multi-provider support ⚡
 
 Automatically extract, translate, and serve multilingual UI — powered by AI ⚡
+
+Designed for performance: no unnecessary data, no re-fetching, minimal bundle impact.
 
 
 ---
 
 ## ✨ Features
 
-* 🔍 Auto-extract static text from your codebase (`t("...")`)
-* 🌍 AI-powered translations (Gemini, Openai)
-* ⚡ Incremental translation (only new strings + languages)
-* 🧠 Zero config runtime (auto loads translations)
-* ⚛️ React hooks + context out of the box
-* 💸 Cost optimized (no re-translation of existing content)
+### 🔧 Core
+* 🔍 Auto-extract static text (`t("...")`)
+* 🌍 AI-powered translations (OpenAI, Gemini)
+* ⚡ Incremental translation (only new strings/languages)
+
+### ⚡ Performance
+* ⚡ Lazy loading (loads only required language)
+* 📦 Per-locale splitting (smaller bundles)
+* 🚀 Built-in caching (no redundant fetches)
+
+### ⚛️ Developer Experience
+* 🧠 Zero-config runtime
+* ⚛️ React hooks + context
 * 🧠 Context-aware translations
+* 💸 Cost optimized (no re-translation)
+
+---
+
+## ⚡ Performance Optimizations
+
+### localize-ai is optimized for production:
+
+* **Per-locale splitting**
+→ Each language is stored separately (translations_en.json, translations_hi.json)
+* **Lazy loading**
+→ Only loads the active language instead of all translations
+* **Caching**
+→ Prevents repeated fetches and improves performance
+
+👉 This ensures fast load times and minimal bundle size.
 
 ---
 
@@ -44,6 +69,8 @@ export default {
   context: "E-commerce checkout UI for buying products"
 };
 ```
+
+👉 Providing context improves translation accuracy by helping AI understand intent (e.g., "Charge" in payments vs battery).
 
 ---
 
@@ -74,13 +101,18 @@ npx localize-ai translate
 This will:
 
 * scan your codebase
-* extract `t("text")`
+* extract t("text")
 * generate translations
-* create:
+* create per-language translation files:
 
 ```
-public/translations.json
-public/localize.runtime.json
+public/
+  ├── translations_en.json
+  ├── translations_hi.json
+  ├── translations_fr.json
+  └── ...
+  
+localize.runtime.json
 ```
 
 ---
@@ -137,8 +169,10 @@ Code → Extract → Clean → AI Translate → JSON → React Context → UI
 
 ```bash
 public/
-  ├── translations.json
-  └── localize.runtime.json
+  ├── translations_en.json
+  ├── translations_hi.json
+  ├── translations_fr.json
+  └── ...
 ```
 
 ---
@@ -193,9 +227,32 @@ npx localize-ai translate   # extract + translate
 
 ## 🗺 Roadmap
 
+### Core Improvements
 * [ ] AST-based extraction (no regex)
-* [ ] Lazy loading translations
-* [ ] CLI UI improvements
+* [ ] Better error handling & retry logic for failed translations
+* [ ] CLI UX improvements (spinners, better logs)
+
+### Performance & DX
+* [x] Lazy loading translations
+* [x] Per-locale splitting
+* [x] Built-in caching
+* [ ] CDN support for translation files
+
+### Features
+* [x] Multi-provider support (OpenAI, Gemini)
+* [ ] Fallback providers (auto-switch if one fails)
+* [ ] Custom translation rules (skip/override specific keys)
+* [ ] Namespace support (group translations)
+
+### Developer Experience
+* [ ] VS Code extension (highlight untranslated strings)
+* [ ] Debug mode (show missing translations in UI)
+* [ ] CLI dry-run mode
+
+### Future Ideas
+* [ ] Support for frameworks beyond React (Next.js, Vue)
+* [ ] Dashboard for managing translations
+* [ ] Analytics (missing keys, usage tracking)
 
 ---
 

@@ -83,47 +83,58 @@ function chunk(arr: string[], size: number) {
 // 🔥 NEW: detect missing languages per text
 function getMissingLangs(
   text: string,
-  existing: any,
+  existingLangMap: Record<string, Record<string, string>>,
   supportedLangs: string[],
 ) {
-  const existingEntry = existing[text] || {};
-  return supportedLangs.filter((lang: string) => !existingEntry[lang]);
+  return supportedLangs.filter((lang) => {
+    return !existingLangMap[lang]?.[text];
+  });
 }
 
-function buildPrompt(chunk: string[], existing: any, supportedLangs: string[]) {
-  const instructions = chunk.map((text) => {
-    const missing = getMissingLangs(text, existing, supportedLangs);
+function escapeText(text: string) {
+  return text.replace(/"/g, '\\"');
+}
 
-    return `"${text}": {
-      "${sourceLanguage}": "${text}",
-      ${missing.map((l: string) => `"${l}": "..."`).join(",\n      ")}
-    }`;
-  });
+function buildPrompt(
+  chunk: string[],
+  existingLangMap: any,
+  supportedLangs: string[],
+) {
+  const instructions = chunk
+    .map((text) => {
+      const missing = getMissingLangs(text, existingLangMap, supportedLangs);
+      if (missing.length === 0) return null;
+
+      const safeText = escapeText(text);
+
+      return `"${safeText}": {
+        "${sourceLanguage}": "${safeText}",
+        ${missing.map((l: string) => `"${l}": "..."`).join(",\n        ")}
+      }`;
+    })
+    .filter(Boolean);
 
   return `
-You are a translation engine.
+You are a localization engine for UI text.
 
 Translate ONLY the missing languages.
 
-${
-  context
-    ? `Context (optional, use only if helpful):
-"${context}"`
-    : ""
-}
+${context ? `Context (use only if helpful): "${context}"` : ""}
 
 Guidelines:
-- Use the provided context ONLY if it improves translation quality
-- Ignore the context if it is not relevant to the text
-- Preserve meaning, tone, and intent of UI text
-- Do NOT over-interpret context
-- Keep translations natural and concise
+- Preserve meaning, tone, and intent (concise, UI-friendly)
+- Ignore context if not useful
+- Use native script and standard formal language
+- Each language must strictly follow its standard vocabulary and grammar. Do not mix with any other language, even if similar.
+- Do not mix languages (strict per ISO code)
+- Keep keys unchanged (exact source string)
+- Keep technical/brand terms if translation is unnatural
 
 Rules:
 - Return ONLY valid JSON
-- No explanation
-- No markdown
+- No explanation or markdown
 - Do NOT overwrite existing translations
+- Include ONLY missing languages per entry
 
 Structure:
 {
@@ -145,13 +156,28 @@ async function translateChunk(
 
   // 🔥 GEMINI FLOW
   if (provider === "gemini") {
-    const result = await model.generateContent(prompt);
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.2,
+        topP: 0.9,
+        topK: 20,
+        maxOutputTokens: 8192,
+        responseMimeType: "application/json",
+      },
+    });
     const response = await result.response;
 
     let text = response.text();
     text = text.replace(/```json|```/g, "").trim();
 
-    return JSON.parse(text);
+    try {
+  return JSON.parse(text);
+} catch (err) {
+  console.error("❌ JSON parse failed");
+  console.log(text);
+  throw err;
+}
   }
 
   // 🔥 OPENAI FLOW
@@ -185,7 +211,13 @@ async function translateChunk(
 
     text = text.replace(/```json|```/g, "").trim();
 
-    return JSON.parse(text);
+    try {
+  return JSON.parse(text);
+} catch (err) {
+  console.error("❌ JSON parse failed");
+  console.log(text);
+  throw err;
+}
   }
 
   throw new Error("Invalid provider");
@@ -197,9 +229,7 @@ async function run() {
   log.step("Starting localization pipeline");
 
   log.info(`Provider: ${provider}`);
-
   log.info(`Source Language: ${sourceLanguage}`);
-
   log.info(`Target Languages: ${supportedLangs.join(", ")}`);
 
   const model = genAI.getGenerativeModel({
@@ -208,30 +238,39 @@ async function run() {
 
   const texts: string[] = JSON.parse(fs.readFileSync(INPUT, "utf-8"));
 
-  let existing: Record<string, any> = {};
+  const PUBLIC_DIR = path.join(ROOT, "public");
 
-  if (fs.existsSync(OUTPUT)) {
-    existing = JSON.parse(fs.readFileSync(OUTPUT, "utf-8"));
+  const existingLangMap: Record<string, Record<string, string>> = {};
+
+  const allLangs = [sourceLanguage, ...supportedLangs];
+
+  // ✅ Load existing files
+  for (const lang of allLangs) {
+    const filePath = path.join(PUBLIC_DIR, `translations_${lang}.json`);
+
+    if (fs.existsSync(filePath)) {
+      existingLangMap[lang] = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    } else {
+      existingLangMap[lang] = {};
+    }
   }
 
+  // ✅ Filter texts needing translation
   const filtered = texts.filter((t) => {
-    const existingEntry = existing[t];
+    const hasSource = existingLangMap[sourceLanguage]?.[t];
 
-    // new string → translate
-    if (!existingEntry) return true;
+    if (!hasSource) return true;
 
-    // check if any language missing
-    const missingLangs = supportedLangs.filter(
-      (lang: string) => !existingEntry[lang],
-    );
+    const missingLangs = supportedLangs.filter((lang: string) => {
+      return !(existingLangMap[lang] && existingLangMap[lang][t]);
+    });
 
     return missingLangs.length > 0;
   });
 
   const chunks = chunk(filtered, CHUNK_SIZE);
 
-  let final = { ...existing };
-
+  // ✅ Progress bar
   function updateProgress(current: number, total: number) {
     const percent = Math.floor((current / total) * 100);
     const barLength = 20;
@@ -243,19 +282,27 @@ async function run() {
     );
   }
 
+  // ✅ Translation loop
   for (const [i, chunk] of chunks.entries()) {
     updateProgress(i + 1, chunks.length);
 
     try {
-      const res = await translateChunk(model, chunk, existing, supportedLangs);
+      const res = await translateChunk(
+        model,
+        chunk,
+        existingLangMap,
+        supportedLangs,
+      );
+
       for (const key in res) {
-        if (!final[key]) {
-          final[key] = res[key];
-        } else {
-          final[key] = {
-            ...final[key],
-            ...res[key], // only adds missing languages
-          };
+        const entry = res[key];
+
+        for (const lang of Object.keys(entry)) {
+          if (!existingLangMap[lang]) {
+            existingLangMap[lang] = {};
+          }
+
+          existingLangMap[lang][key] = entry[lang];
         }
       }
     } catch (err: any) {
@@ -263,17 +310,33 @@ async function run() {
       console.log(err?.message || err);
     }
   }
-  process.stdout.write("\n"); // move to next line after progress
 
-  fs.writeFileSync(OUTPUT, JSON.stringify(final, null, 2));
+  process.stdout.write("\n");
 
-  log.success("translations.json generated successfully!");
+  // ✅ Ensure public folder exists
+  if (!fs.existsSync(PUBLIC_DIR)) {
+    fs.mkdirSync(PUBLIC_DIR, { recursive: true });
+  }
+
+  // ✅ Write language-wise files
+  for (const lang of allLangs) {
+    const filePath = path.join(PUBLIC_DIR, `translations_${lang}.json`);
+
+    fs.writeFileSync(filePath, JSON.stringify(existingLangMap[lang], null, 2));
+  }
+
+  log.success("translations generated successfully!");
 
   console.log("\n📊 Summary:");
   console.log(`   Total input strings: ${texts.length}`);
   console.log(`   Translated now: ${filtered.length}`);
-  console.log(`   Total stored translations: ${Object.keys(final).length}`);
-  console.log(`   Output: public/translations.json\n`);
+  console.log(
+    `   Total stored translations: ${
+      Object.values(existingLangMap[sourceLanguage] || {}).length
+    }`,
+  );
+  console.log(`   Output: public/translations_[lang].json\n`);
+
   const duration = ((Date.now() - startTime) / 1000).toFixed(2);
   console.log(`⏱ Completed in ${duration}s`);
 }

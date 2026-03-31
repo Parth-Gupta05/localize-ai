@@ -15,7 +15,7 @@ export function useTranslation() {
 
     if (!entry) return key;
 
-    return entry[lang] || entry["en"] || key;
+    return entry;
   }
 
   return { t, setLang, lang, supportedLangs };

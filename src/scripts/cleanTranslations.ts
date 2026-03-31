@@ -16,7 +16,7 @@ function isValid(text: string): boolean {
 }
 
 if (!fs.existsSync(INPUT)) {
-  console.error("❌ translations_en.json not found");
+  console.error("❌ extractedText.json not found");
   process.exit(1);
 }
 
