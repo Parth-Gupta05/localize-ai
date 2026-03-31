@@ -1,4 +1,4 @@
-# 🚀 localize-ai
+#  localize-ai
 
 
 **Plug & Play AI-powered localization for React apps with lazy loading & per-locale splitting**

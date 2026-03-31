@@ -1,10 +1,11 @@
 {
   "name": "localize-ai",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "AI-powered React localization with context-aware translations, multi-provider support, lazy loading, and per-locale splitting",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
+  "readme": "README.md",
   "files": [
     "dist",
     "README.md"
