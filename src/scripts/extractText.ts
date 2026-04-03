@@ -1,9 +1,14 @@
 import fs from "fs";
 import path from "path";
+import * as parser from "@babel/parser";
+import traverseModule from "@babel/traverse";
+import * as t from "@babel/types";
 
-const ROOT = process.cwd(); // ✅ user project
+const traverse = traverseModule.default;
+
+const ROOT = process.cwd();
 const SRC_DIR = path.join(ROOT, "src");
-const OUTPUT_FILE = path.join(ROOT,"extractedText.json");
+const OUTPUT_FILE = path.join(ROOT, "extractedText.json");
 
 let existingStrings = new Set<string>();
 
@@ -15,13 +20,77 @@ if (fs.existsSync(OUTPUT_FILE)) {
 
 const newStrings = new Set<string>();
 
+// 🔥 Normalize string (CRITICAL FIX)
+function normalize(text: string): string {
+  return text
+    .trim()
+}
+
+// 🔥 Relaxed validation (FIXED)
 function isValidText(text: string): boolean {
   if (!text || text.length < 2) return false;
   if (/^\d+$/.test(text)) return false;
-  if (text.includes("@")) return false;
-  if (/^[A-Z0-9-]+$/.test(text)) return false;
-  if (/₹|\$|€/.test(text)) return false;
+  if (/^[A-Z0-9-_]+$/.test(text)) return false;
   return true;
+}
+
+function extractFromAST(content: string, filePath: string) {
+  try {
+    const ast = parser.parse(content, {
+      sourceType: "module",
+      plugins: ["jsx", "typescript"],
+    });
+
+    traverse(ast, {
+      CallExpression(path: any) {
+        const { callee, arguments: args } = path.node;
+
+        if (!t.isIdentifier(callee) || callee.name !== "t") return;
+
+        const firstArg = args[0];
+        if (!firstArg) return;
+
+        let extractedValue: string | null = null;
+
+        // ✅ STRING LITERAL
+        if (t.isStringLiteral(firstArg)) {
+          extractedValue = firstArg.value;
+        }
+
+        // ✅ TEMPLATE LITERAL
+        else if (t.isTemplateLiteral(firstArg)) {
+          // ❌ BLOCK dynamic template usage (IMPORTANT)
+          if (firstArg.expressions.length > 0) {
+            console.error(`
+❌ Invalid template literal detected
+📄 File: ${filePath}
+📍 Line: ${path.node.loc?.start.line}
+💡 Code: t(\`...\${}\`)
+👉 Fix: t("Text {{var}}", { var })
+`);
+            return;
+          }
+
+          extractedValue = firstArg.quasis
+            .map((q) => q.value.cooked || "")
+            .join("");
+        }
+
+        if (!extractedValue) return;
+
+        const normalizedText = normalize(extractedValue);
+
+        if (
+          isValidText(normalizedText) &&
+          !existingStrings.has(normalizedText)
+        ) {
+          newStrings.add(normalizedText);
+        }
+      },
+    });
+  } catch {
+    console.warn(`⚠️ Failed to parse: ${filePath}`);
+  }
 }
 
 function scanDir(dir: string) {
@@ -34,19 +103,7 @@ function scanDir(dir: string) {
       scanDir(fullPath);
     } else if (/\.(tsx|jsx|ts|js)$/.test(file)) {
       const content = fs.readFileSync(fullPath, "utf-8");
-
-      const regex =
-        /t\(\s*["'`]([^"'`]+)["'`]\s*(?:,\s*[a-zA-Z0-9_.]+)?\s*\)/g;
-
-      let match: RegExpExecArray | null;
-
-while ((match = regex.exec(content)) !== null) {
-  const text = match[1]!.trim();
-
-  if (isValidText(text) && !existingStrings.has(text)) {
-    newStrings.add(text);
-  }
-}
+      extractFromAST(content, fullPath);
     }
   }
 }

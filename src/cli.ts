@@ -11,7 +11,14 @@ const command = process.argv[2];
 
 if (command === "init") {
   generateRuntimeConfig();
-} 
+}
+else if (command === "delete-sync"){
+  const deletePath = path.join(__dirname, "scripts", "deleteSync.js");
+  execSync(`node "${deletePath}"`, { stdio: "inherit" });
+  
+  console.log("✅ Done");
+
+}
 else if (command === "translate") {
   console.log("🚀 Running localization pipeline...");
 

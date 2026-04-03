@@ -15,7 +15,9 @@ Designed for performance: no unnecessary data, no re-fetching, minimal bundle im
 ## ✨ Features
 
 ### 🔧 Core
-* 🔍 Auto-extract static text (`t("...")`)
+* 🔍 AST-based extraction (no regex)
+* 🧩 Supports template literals with variables
+* 🧹 Removes unused (dead) translations automatically
 * 🌍 AI-powered translations (OpenAI, Gemini)
 * ⚡ Incremental translation (only new strings/languages)
 
@@ -44,6 +46,26 @@ Designed for performance: no unnecessary data, no re-fetching, minimal bundle im
 → Prevents repeated fetches and improves performance
 
 👉 This ensures fast load times and minimal bundle size.
+
+---
+
+### 🧠 Smart Extraction (AST-based)
+
+Localize-ai uses AST parsing instead of regex, ensuring accurate extraction:
+
+* Handles complex code patterns
+* Supports template literals with variables
+* Avoids false positives
+
+Example:
+```
+t(`hello {{userName}}, your order {{id}} is ready`, {
+  userName,
+  id: orderId
+});
+```
+
+👉 Variables are preserved and translated correctly.
 
 ---
 
@@ -137,8 +159,11 @@ import { useTranslation } from "localize-ai";
 function App() {
   const { t } = useTranslation();
 
-  return <h1>{t("Hello world")}</h1>;
-}
+  return (
+    <p>
+      {t("Welcome back, {{name}}!", { name: userName })}
+    </p>
+)}
 ```
 
 ---
@@ -150,6 +175,22 @@ const { setLang } = useTranslation();
 
 setLang("fr"); // switch language
 ```
+
+---
+
+## 🧹 Dead Translation Cleanup
+
+```
+npx localize-ai delete-sync
+```
+
+Localize-ai automatically removes unused translations:
+
+* Detects strings no longer present in code
+* Cleans up translation files
+Keeps JSON lean and optimized
+
+👉 Prevents bloated translation files over time.
 
 ---
 
@@ -187,11 +228,7 @@ public/
 
 ```json
 {
-  "Get started": {
-    "en": "Get started",
-    "hi": "शुरू करें",
-    "fr": "Commencer"
-  }
+  "Get started": "शुरू करें"
 }
 ```
 
@@ -228,7 +265,7 @@ npx localize-ai translate   # extract + translate
 ## 🗺 Roadmap
 
 ### Core Improvements
-* [ ] AST-based extraction (no regex)
+* [x] AST-based extraction (no regex)
 * [ ] Better error handling & retry logic for failed translations
 * [ ] CLI UX improvements (spinners, better logs)
 

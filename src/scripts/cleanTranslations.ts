@@ -7,11 +7,9 @@ const INPUT = path.join(ROOT, "extractedText.json");
 const OUTPUT = path.join(ROOT, "cleaned_strings.json");
 
 function isValid(text: string): boolean {
-  if (!text || text.length < 3) return false;
+  if (!text || text.length < 2) return false;
   if (/^\d+$/.test(text)) return false;
-  if (text.includes("@")) return false;
-  if (/^[^a-zA-Z]+$/.test(text)) return false;
-  if (text.includes("\\\\")) return false;
+  if (/^[A-Z0-9-_]+$/.test(text)) return false;
   return true;
 }
 

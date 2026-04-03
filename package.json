@@ -1,6 +1,6 @@
 {
   "name": "localize-ai",
-  "version": "1.2.4",
+  "version": "1.3.0",
   "description": "AI-powered React localization with context-aware translations, multi-provider support, lazy loading, and per-locale splitting",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -41,6 +41,9 @@
   "author": "Parth Gupta",
   "license": "MIT",
   "dependencies": {
+    "@babel/parser": "^7.29.2",
+    "@babel/traverse": "^7.29.0",
+    "@babel/types": "^7.29.0",
     "@google/generative-ai": "^0.24.1",
     "dotenv": "^17.3.1",
     "openai": "^6.33.0"
@@ -49,6 +52,7 @@
     "react": ">=18"
   },
   "devDependencies": {
+    "@types/babel__traverse": "^7.28.0",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "react": "^19.2.4",
