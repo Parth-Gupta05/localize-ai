@@ -172,12 +172,12 @@ async function translateChunk(
     text = text.replace(/```json|```/g, "").trim();
 
     try {
-  return JSON.parse(text);
-} catch (err) {
-  console.error("❌ JSON parse failed");
-  console.log(text);
-  throw err;
-}
+      return JSON.parse(text);
+    } catch (err) {
+      console.error("❌ JSON parse failed");
+      console.log(text);
+      throw err;
+    }
   }
 
   // 🔥 OPENAI FLOW
@@ -212,12 +212,12 @@ async function translateChunk(
     text = text.replace(/```json|```/g, "").trim();
 
     try {
-  return JSON.parse(text);
-} catch (err) {
-  console.error("❌ JSON parse failed");
-  console.log(text);
-  throw err;
-}
+      return JSON.parse(text);
+    } catch (err) {
+      console.error("❌ JSON parse failed");
+      console.log(text);
+      throw err;
+    }
   }
 
   throw new Error("Invalid provider");
@@ -236,22 +236,31 @@ async function run() {
     model: "gemini-2.5-flash",
   });
 
-  const texts: string[] = JSON.parse(fs.readFileSync(INPUT, "utf-8"));
+  const raw: Record<string, string[]> = JSON.parse(
+    fs.readFileSync(INPUT, "utf-8"),
+  );
 
-  const PUBLIC_DIR = path.join(ROOT, "public");
+  const namespaceMap: Record<string, string[]> = raw;
+
+  const texts: string[] = Object.values(namespaceMap).flat();
+
+  const LOCALES_DIR = path.join(ROOT, "public", "locales");
 
   const existingLangMap: Record<string, Record<string, string>> = {};
 
   const allLangs = [sourceLanguage, ...supportedLangs];
 
-  // ✅ Load existing files
   for (const lang of allLangs) {
-    const filePath = path.join(PUBLIC_DIR, `translations_${lang}.json`);
+    existingLangMap[lang] = {};
 
-    if (fs.existsSync(filePath)) {
-      existingLangMap[lang] = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-    } else {
-      existingLangMap[lang] = {};
+    for (const namespace of Object.keys(namespaceMap)) {
+      const filePath = path.join(LOCALES_DIR, lang, `${namespace}.json`);
+
+      if (fs.existsSync(filePath)) {
+        const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+
+        Object.assign(existingLangMap[lang], data);
+      }
     }
   }
 
@@ -297,7 +306,14 @@ async function run() {
       for (const key in res) {
         const entry = res[key];
 
+        if (typeof entry !== "object" || entry === null) {
+          log.warn(`⚠️ Invalid format for key: ${key}`);
+          continue;
+        }
+
         for (const lang of Object.keys(entry)) {
+          if (!allLangs.includes(lang)) continue;
+
           if (!existingLangMap[lang]) {
             existingLangMap[lang] = {};
           }
@@ -314,15 +330,39 @@ async function run() {
   process.stdout.write("\n");
 
   // ✅ Ensure public folder exists
-  if (!fs.existsSync(PUBLIC_DIR)) {
-    fs.mkdirSync(PUBLIC_DIR, { recursive: true });
+  // ✅ Ensure locales root exists
+  if (!fs.existsSync(LOCALES_DIR)) {
+    fs.mkdirSync(LOCALES_DIR, { recursive: true });
   }
 
-  // ✅ Write language-wise files
+  // ✅ Write namespace-based files
   for (const lang of allLangs) {
-    const filePath = path.join(PUBLIC_DIR, `translations_${lang}.json`);
+    for (const namespace of Object.keys(namespaceMap)) {
+      const dir = path.join(LOCALES_DIR, lang);
+      const filePath = path.join(dir, `${namespace}.json`);
 
-    fs.writeFileSync(filePath, JSON.stringify(existingLangMap[lang], null, 2));
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+
+      let existingData: Record<string, string> = {};
+
+      if (fs.existsSync(filePath)) {
+        existingData = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+      }
+
+      const namespaceStrings = namespaceMap[namespace] ?? [];
+
+      const updated: Record<string, string> = { ...existingData };
+
+      for (const text of namespaceStrings) {
+        if (existingLangMap[lang]?.[text]) {
+          updated[text] = existingLangMap[lang][text];
+        }
+      }
+
+      fs.writeFileSync(filePath, JSON.stringify(updated, null, 2));
+    }
   }
 
   log.success("translations generated successfully!");
@@ -335,8 +375,9 @@ async function run() {
       Object.values(existingLangMap[sourceLanguage] || {}).length
     }`,
   );
-  console.log(`   Output: public/translations_[lang].json\n`);
 
+  // ✅ Updated log
+  console.log(`   Output: public/locales/{lang}/{namespace}.json\n`);
   const duration = ((Date.now() - startTime) / 1000).toFixed(2);
   console.log(`⏱ Completed in ${duration}s`);
 }

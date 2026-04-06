@@ -10,23 +10,21 @@ const ROOT = process.cwd();
 const SRC_DIR = path.join(ROOT, "src");
 const OUTPUT_FILE = path.join(ROOT, "extractedText.json");
 
-let existingStrings = new Set<string>();
+// 🔥 NEW: namespace-based storage
+let existingStrings: Record<string, string[]> = {};
 
 if (fs.existsSync(OUTPUT_FILE)) {
-  existingStrings = new Set(
-    JSON.parse(fs.readFileSync(OUTPUT_FILE, "utf-8"))
-  );
+  existingStrings = JSON.parse(fs.readFileSync(OUTPUT_FILE, "utf-8"));
 }
 
-const newStrings = new Set<string>();
+const newStrings: Record<string, Set<string>> = {};
 
-// 🔥 Normalize string (CRITICAL FIX)
+// 🔥 Normalize
 function normalize(text: string): string {
-  return text
-    .trim()
+  return text.trim();
 }
 
-// 🔥 Relaxed validation (FIXED)
+// 🔥 Validation
 function isValidText(text: string): boolean {
   if (!text || text.length < 2) return false;
   if (/^\d+$/.test(text)) return false;
@@ -41,6 +39,30 @@ function extractFromAST(content: string, filePath: string) {
       plugins: ["jsx", "typescript"],
     });
 
+    let namespace = "common"; // 🔥 default
+
+    traverse(ast, {
+      // 🔥 STEP 1: detect namespace
+      CallExpression(path: any) {
+        const { callee, arguments: args } = path.node;
+
+        // detect useTranslation("namespace")
+        if (t.isIdentifier(callee) && callee.name === "useTranslation") {
+          const firstArg = args[0];
+
+          if (t.isStringLiteral(firstArg)) {
+            namespace = firstArg.value;
+          }
+        }
+      },
+    });
+
+    // ensure namespace exists
+    if (!newStrings[namespace]) {
+      newStrings[namespace] = new Set<string>();
+    }
+
+    // 🔥 STEP 2: extract t() strings
     traverse(ast, {
       CallExpression(path: any) {
         const { callee, arguments: args } = path.node;
@@ -52,21 +74,19 @@ function extractFromAST(content: string, filePath: string) {
 
         let extractedValue: string | null = null;
 
-        // ✅ STRING LITERAL
+        // ✅ string literal
         if (t.isStringLiteral(firstArg)) {
           extractedValue = firstArg.value;
         }
 
-        // ✅ TEMPLATE LITERAL
+        // ✅ template literal
         else if (t.isTemplateLiteral(firstArg)) {
-          // ❌ BLOCK dynamic template usage (IMPORTANT)
           if (firstArg.expressions.length > 0) {
             console.error(`
 ❌ Invalid template literal detected
 📄 File: ${filePath}
 📍 Line: ${path.node.loc?.start.line}
-💡 Code: t(\`...\${}\`)
-👉 Fix: t("Text {{var}}", { var })
+👉 Use {{var}} instead of \${var}
 `);
             return;
           }
@@ -80,11 +100,8 @@ function extractFromAST(content: string, filePath: string) {
 
         const normalizedText = normalize(extractedValue);
 
-        if (
-          isValidText(normalizedText) &&
-          !existingStrings.has(normalizedText)
-        ) {
-          newStrings.add(normalizedText);
+        if (isValidText(normalizedText)) {
+          (newStrings[namespace] ??= new Set()).add(normalizedText);
         }
       },
     });
@@ -110,8 +127,26 @@ function scanDir(dir: string) {
 
 scanDir(SRC_DIR);
 
-const updated = [...existingStrings, ...newStrings];
+// 🔥 MERGE with existing
+const finalOutput: Record<string, string[]> = {};
 
-fs.writeFileSync(OUTPUT_FILE, JSON.stringify(updated, null, 2));
+Object.keys(newStrings).forEach((ns) => {
+  const existing = new Set(existingStrings[ns] || []);
+  const combined = new Set([
+    ...existing,
+    ...Array.from(newStrings[ns] ?? new Set<string>()),
+  ]);
 
-console.log(`✅ Added ${newStrings.size} new strings`);
+  finalOutput[ns] = Array.from(combined);
+});
+
+// keep old namespaces if not touched
+Object.keys(existingStrings).forEach((ns) => {
+  if (!finalOutput[ns]) {
+    finalOutput[ns] = existingStrings[ns] ?? [];
+  }
+});
+
+fs.writeFileSync(OUTPUT_FILE, JSON.stringify(finalOutput, null, 2));
+
+console.log("✅ Extraction complete with namespaces");

@@ -18,10 +18,19 @@ if (!fs.existsSync(INPUT)) {
   process.exit(1);
 }
 
-const raw: string[] = JSON.parse(fs.readFileSync(INPUT, "utf-8"));
+// 🔥 UPDATED TYPE (namespace based)
+const raw: Record<string, string[]> = JSON.parse(
+  fs.readFileSync(INPUT, "utf-8"),
+);
 
-const cleaned = raw.filter(isValid);
+// 🔥 CLEAN PER NAMESPACE (same logic preserved)
+const cleaned: Record<string, string[]> = {};
 
+Object.entries(raw).forEach(([namespace, strings]) => {
+  cleaned[namespace] = strings.filter(isValid);
+});
+
+// 🔥 WRITE SAME STRUCTURE
 fs.writeFileSync(OUTPUT, JSON.stringify(cleaned, null, 2));
 
-console.log(`✅ Cleaned strings: ${cleaned.length}`);
+console.log(`✅ Cleaned namespaces: ${Object.keys(cleaned).length}`);

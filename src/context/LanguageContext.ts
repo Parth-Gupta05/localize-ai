@@ -4,8 +4,8 @@ type LanguageContextType = {
   lang: string;
   supportedLangs: string[];
   setLang: (lang: string) => void;
-  translations: Record<string, string>;
 
+  cache: Record<string, Record<string, Record<string, string>>>;
 };
 
 // 👇 safe: default is null

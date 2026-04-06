@@ -91,18 +91,14 @@ function cleanJsonFile(filePath: string, usedKeys: Set<string>) {
   if (Array.isArray(data)) {
     const before = data.length;
 
-    updated = data.filter((key: string) =>
-      usedKeys.has(normalize(key))
-    );
+    updated = data.filter((key: string) => usedKeys.has(normalize(key)));
 
     removedCount = before - updated.length;
   } else {
     const before = Object.keys(data).length;
 
     updated = Object.fromEntries(
-      Object.entries(data).filter(([key]) =>
-        usedKeys.has(normalize(key))
-      )
+      Object.entries(data).filter(([key]) => usedKeys.has(normalize(key))),
     );
 
     const after = Object.keys(updated).length;
@@ -140,14 +136,25 @@ function run() {
   logResult(CLEANED_FILE, cleanJsonFile(CLEANED_FILE, usedKeys));
 
   // translations
-  if (fs.existsSync(PUBLIC_DIR)) {
-    const files = fs.readdirSync(PUBLIC_DIR);
+  const LOCALES_DIR = path.join(ROOT, "public", "locales");
 
-    files.forEach((file) => {
-      if (/^translations_.*\.json$/.test(file)) {
-        const fullPath = path.join(PUBLIC_DIR, file);
-        logResult(fullPath, cleanJsonFile(fullPath, usedKeys));
-      }
+  if (fs.existsSync(LOCALES_DIR)) {
+    const langs = fs.readdirSync(LOCALES_DIR);
+
+    langs.forEach((lang) => {
+      const langDir = path.join(LOCALES_DIR, lang);
+
+      if (!fs.statSync(langDir).isDirectory()) return;
+
+      const files = fs.readdirSync(langDir);
+
+      files.forEach((file) => {
+        if (file.endsWith(".json")) {
+          const fullPath = path.join(langDir, file);
+
+          logResult(fullPath, cleanJsonFile(fullPath, usedKeys));
+        }
+      });
     });
   }
 
