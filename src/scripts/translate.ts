@@ -304,23 +304,31 @@ async function run() {
       );
 
       for (const key in res) {
-        const entry = res[key];
+  const entry = res[key];
 
-        if (typeof entry !== "object" || entry === null) {
-          log.warn(`⚠️ Invalid format for key: ${key}`);
-          continue;
-        }
+  if (typeof entry !== "object" || entry === null) {
+    log.warn(`⚠️ Invalid format for key: ${key}`);
+    continue;
+  }
 
-        for (const lang of Object.keys(entry)) {
-          if (!allLangs.includes(lang)) continue;
+  // 🔥 ALWAYS STORE SOURCE LANGUAGE (CRITICAL FIX)
+  if (!existingLangMap[sourceLanguage]) {
+    existingLangMap[sourceLanguage] = {};
+  }
 
-          if (!existingLangMap[lang]) {
-            existingLangMap[lang] = {};
-          }
+  existingLangMap[sourceLanguage][key] = key;
 
-          existingLangMap[lang][key] = entry[lang];
-        }
-      }
+  // 🔥 Merge AI languages
+  for (const lang of Object.keys(entry)) {
+    if (!allLangs.includes(lang)) continue;
+
+    if (!existingLangMap[lang]) {
+      existingLangMap[lang] = {};
+    }
+
+    existingLangMap[lang][key] = entry[lang];
+  }
+}
     } catch (err: any) {
       log.error(`Chunk ${i + 1} failed`);
       console.log(err?.message || err);
