@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import LanguageContext from "../context/LanguageContext.js";
 
 function normalize(text: string): string {
@@ -14,7 +14,7 @@ export function useTranslation(namespace: string = "common") {
     );
   }
 
-  const { lang, setLang, supportedLangs, cache } = context;
+  const { lang, setLang, supportedLangs, cache, debugColor, debug } = context;
 
   const [translations, setTranslations] = useState<Record<string, string>>({});
 
@@ -69,12 +69,48 @@ export function useTranslation(namespace: string = "common") {
   }
 
   // 🔥 translation function
-  function t(key: string, vars?: Record<string, any>): string {
+  function t(
+    key: string,
+    vars?: Record<string, any>,
+  ): string | React.ReactNode {
     const normalizedKey = normalize(key);
+
+    const exists =
+      translations[normalizedKey] !== undefined ||
+      translations[key] !== undefined;
 
     const baseText = translations[normalizedKey] || translations[key] || key;
 
-    return interpolate(baseText, vars);
+    const finalText = interpolate(baseText, vars);
+
+    // 🔥 DEBUG MODE
+    if (debug && !exists) {
+      return (
+        <span
+          style={{
+            backgroundColor: debugColor || "red",
+            padding: "2px 4px",
+            borderRadius:"5px"
+          }}
+        >
+          {finalText}
+        </span>
+      );
+    } else if (debug && exists) {
+      return (
+        <span
+          style={{
+            backgroundColor: exists ? "green" : "red",
+            outline: exists ? "1px solid green" : "none",
+            borderRadius: "5px"
+          }}
+        >
+          {finalText}
+        </span>
+      );
+    }
+
+    return finalText;
   }
 
   return { t, setLang, lang, supportedLangs };

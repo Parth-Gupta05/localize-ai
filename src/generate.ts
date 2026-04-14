@@ -36,6 +36,7 @@ const context =
     apikey: config.apikey,
     provider: config.provider,
     context,
+    debugColor:config.debugColor
   };
 
   const outputPath = path.resolve(process.cwd(), "localize.runtime.json");

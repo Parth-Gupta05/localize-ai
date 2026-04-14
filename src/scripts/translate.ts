@@ -291,6 +291,7 @@ async function run() {
     );
   }
 
+if (!isDryRun) {
   // ✅ Translation loop
   for (const [i, chunk] of chunks.entries()) {
     updateProgress(i + 1, chunks.length);
@@ -304,36 +305,36 @@ async function run() {
       );
 
       for (const key in res) {
-  const entry = res[key];
+        const entry = res[key];
 
-  if (typeof entry !== "object" || entry === null) {
-    log.warn(`⚠️ Invalid format for key: ${key}`);
-    continue;
-  }
+        if (typeof entry !== "object" || entry === null) {
+          log.warn(`⚠️ Invalid format for key: ${key}`);
+          continue;
+        }
 
-  // 🔥 ALWAYS STORE SOURCE LANGUAGE (CRITICAL FIX)
-  if (!existingLangMap[sourceLanguage]) {
-    existingLangMap[sourceLanguage] = {};
-  }
+        // 🔥 ALWAYS STORE SOURCE LANGUAGE
+        if (!existingLangMap[sourceLanguage]) {
+          existingLangMap[sourceLanguage] = {};
+        }
 
-  existingLangMap[sourceLanguage][key] = key;
+        existingLangMap[sourceLanguage][key] = key;
 
-  // 🔥 Merge AI languages
-  for (const lang of Object.keys(entry)) {
-    if (!allLangs.includes(lang)) continue;
+        for (const lang of Object.keys(entry)) {
+          if (!allLangs.includes(lang)) continue;
 
-    if (!existingLangMap[lang]) {
-      existingLangMap[lang] = {};
-    }
+          if (!existingLangMap[lang]) {
+            existingLangMap[lang] = {};
+          }
 
-    existingLangMap[lang][key] = entry[lang];
-  }
-}
+          existingLangMap[lang][key] = entry[lang];
+        }
+      }
     } catch (err: any) {
       log.error(`Chunk ${i + 1} failed`);
       console.log(err?.message || err);
     }
   }
+}
 
   process.stdout.write("\n");
 
@@ -344,6 +345,7 @@ async function run() {
   }
 
   // ✅ Write namespace-based files
+  if (!isDryRun) {
   for (const lang of allLangs) {
     for (const namespace of Object.keys(namespaceMap)) {
       const dir = path.join(LOCALES_DIR, lang);
@@ -372,22 +374,58 @@ async function run() {
       fs.writeFileSync(filePath, JSON.stringify(updated, null, 2));
     }
   }
+}
+
+  let newStringsCount = 0;
+let missingTranslationsCount = 0;
+let partialTranslationsCount = 0;
+
+texts.forEach((text) => {
+  const hasSource = existingLangMap[sourceLanguage]?.[text];
+
+  if (!hasSource) {
+    newStringsCount++;
+    return;
+  }
+
+  let translatedCount = 0;
+
+  for (const lang of supportedLangs) {
+    if (existingLangMap[lang]?.[text]) {
+      translatedCount++;
+    }
+  }
+
+  if (translatedCount === 0) {
+    missingTranslationsCount++;
+  } else if (translatedCount < supportedLangs.length) {
+    partialTranslationsCount++;
+  }
+});
 
   log.success("translations generated successfully!");
 
   console.log("\n📊 Summary:");
-  console.log(`   Total input strings: ${texts.length}`);
-  console.log(`   Translated now: ${filtered.length}`);
-  console.log(
-    `   Total stored translations: ${
-      Object.values(existingLangMap[sourceLanguage] || {}).length
-    }`,
-  );
+console.log(`   Total input strings: ${texts.length}`);
 
-  // ✅ Updated log
-  console.log(`   Output: public/locales/{lang}/{namespace}.json\n`);
-  const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-  console.log(`⏱ Completed in ${duration}s`);
+if (isDryRun) {
+  console.log(`   🆕 New strings: ${newStringsCount}`);
+  console.log(`   🌐 Missing translations: ${missingTranslationsCount}`);
+  console.log(`   ⚠️ Partial translations: ${partialTranslationsCount}`);
+  console.log(`   Translated now: 0`);
+} else {
+  console.log(`   Translated now: ${filtered.length}`);
 }
+
+console.log(
+  `   Total stored translations: ${
+    Object.values(existingLangMap[sourceLanguage] || {}).length
+  }`
+);
+
+console.log(`   Output: public/locales/{lang}/{namespace}.json\n`);
+}
+
+const isDryRun = process.argv.includes("--dry-run");
 
 run();

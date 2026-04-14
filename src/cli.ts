@@ -20,7 +20,13 @@ else if (command === "delete-sync"){
 
 }
 else if (command === "translate") {
-  console.log("🚀 Running localization pipeline...");
+  const isDryRun = process.argv.includes("--dry-run");
+
+  console.log(
+    isDryRun
+      ? "🧪 Running dry-run (no translations will be made)..."
+      : "🚀 Running localization pipeline..."
+  );
 
   const extractPath = path.join(__dirname, "scripts", "extractText.js");
   const cleanPath = path.join(__dirname, "scripts", "cleanTranslations.js");
@@ -28,7 +34,12 @@ else if (command === "translate") {
 
   execSync(`node "${extractPath}"`, { stdio: "inherit" });
   execSync(`node "${cleanPath}"`, { stdio: "inherit" });
-  execSync(`node "${translatePath}"`, { stdio: "inherit" });
+
+  // 🔥 pass flag forward
+  execSync(
+    `node "${translatePath}" ${isDryRun ? "--dry-run" : ""}`,
+    { stdio: "inherit" }
+  );
 
   console.log("✅ Done");
 } 

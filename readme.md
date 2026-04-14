@@ -39,6 +39,8 @@ Designed for performance: no unnecessary data, no re-fetching, minimal bundle im
 - ⚛️ React hooks + context
 - 🧠 Context-aware translations
 - 💸 Cost optimized (no re-translation)
+- 🐞 Debug mode (highlight translated & missing strings in UI)
+- 🧪 Dry-run mode (preview extraction & translation without modifying files)
 
 ---
 
@@ -118,6 +120,89 @@ This ensures:
 - no duplicate network requests
 - faster UI rendering
 - better runtime performance
+
+---
+
+## 🐞 Debug Mode
+
+localize-ai provides a built-in debug mode to visualize translation status directly in your UI.
+
+Enable debug mode:
+```
+<LanguageContextProvider debug={true}>
+  <App />
+</LanguageContextProvider>
+```
+
+Behavior:
+🟢 Translated strings → highlighted in green
+🟡 Missing translations → highlighted in custom color
+
+Configure debug color:
+```
+// localize.config.js
+export default {
+  sourceLanguage: "en",
+  translationLanguages: ["hi", "fr", "es", "ar"],
+  provider: "gemini",
+  apikey: "VITE_GEMINI_API_KEY",
+  debugColor: "yellow",
+  context: "Kit kat condolence message page"
+};
+```
+
+👉 Helps quickly identify missing translations during development.
+
+---
+
+## 🧪 Dry Run Mode
+
+localize-ai supports a dry-run mode to preview the entire localization pipeline without writing any translations.
+
+Run dry-run:
+```
+npx localize-ai translate --dry-run
+```
+
+What it does:
+* Extracts strings using AST
+* Validates template literals
+* Detects missing / partial translations
+* Shows summary without modifying files
+* Example output:
+```
+🧪 Running dry-run (no translations will be made)...
+
+❌ Invalid template literal detected
+📄 File: src/App.jsx
+📍 Line: 82
+👉 Use {{var}} instead of ${var}
+
+✅ Extraction complete with namespaces
+✅ Cleaned namespaces: 2
+
+🚀 Starting localization pipeline
+ℹ️  Provider: gemini
+ℹ️  Source Language: en
+ℹ️  Target Languages: hi, fr, es, ar
+
+📊 Summary:
+   Total input strings: 22
+   🆕 New strings: 0
+   🌐 Missing translations: 0
+   ⚠️ Partial translations: 0
+   Translated now: 0
+   Total stored translations: 22
+
+✅ Done
+```
+
+Why use dry-run?
+🛡️ Safe preview before running translations
+🔍 Catch errors (like invalid template literals)
+📊 Understand translation coverage
+
+👉 Ideal for CI checks and debugging.
 
 ---
 
@@ -303,6 +388,7 @@ public/
 npx localize-ai init        # generate runtime config
 npx localize-ai translate   # extract + translate
 npx localize-ai delete-sync   # delete dead translations
+npx localize-ai translate --dry-run   # preview without writing files
 ```
 
 ---
@@ -355,8 +441,8 @@ npx localize-ai delete-sync   # delete dead translations
 
 ### Developer Experience
 - [ ] VS Code extension (highlight untranslated strings)
-- [ ] Debug mode (show missing translations in UI)
-- [ ] CLI dry-run mode
+- [x] Debug mode (show missing translations in UI)
+- [x] CLI dry-run mode
 - [ ] Type-safe translations (TS support for keys)
 
 ### Maintenance & Optimization

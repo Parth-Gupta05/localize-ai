@@ -1,7 +1,7 @@
 {
   "name": "localize-ai",
-  "version": "1.4.1",
-  "description": "AI-powered React localization with AST-based extraction, namespace-based loading, smart caching, and multi-provider support",
+  "version": "1.5.1",
+  "description": "AI-powered React localization with AST-based extraction, namespace-based loading, smart caching, debug mode and multi-provider support",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",

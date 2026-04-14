@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import LanguageContext from "./LanguageContext.js";
 
-function LanguageContextProvider({ children }: { children: React.ReactNode }) {
+function LanguageContextProvider({ children, debug=false }: { children: React.ReactNode, debug?:boolean }) {
   const [lang, setLang] = useState<string>("en");
   const [supportedLangs, setSupportedLangs] = useState<string[]>([]);
   const [isReady, setIsReady] = useState(false);
+  const [debugColor, setDebugColor] = useState<string>("red");
 
   // 🔥 cache → lang → namespace → translations
   const cache = useRef<Record<string, Record<string, Record<string, string>>>>(
@@ -26,6 +27,9 @@ function LanguageContextProvider({ children }: { children: React.ReactNode }) {
           : "en";
 
         setLang(initialLang);
+        if(config.debugColor){
+          setDebugColor(config.debugColor)
+        };
       } catch (err) {
         console.warn("⚠️ Failed to load runtime config", err);
       } finally {
@@ -44,6 +48,8 @@ function LanguageContextProvider({ children }: { children: React.ReactNode }) {
         lang,
         setLang,
         supportedLangs,
+        debugColor,
+        debug,
         cache: cache.current, // 🔥 expose cache
       }}
     >
